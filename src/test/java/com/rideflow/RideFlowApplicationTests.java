@@ -5,6 +5,7 @@ import com.rideflow.modules.ride.repository.RideRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest(
@@ -27,6 +28,10 @@ class RideFlowApplicationTests {
 
     @MockBean
     private RideRepository rideRepository;
+
+    @SuppressWarnings("rawtypes")
+    @MockBean
+    private KafkaTemplate kafkaTemplate;
 
     @Test
     void contextLoads() {
