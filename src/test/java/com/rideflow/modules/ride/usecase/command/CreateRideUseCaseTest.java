@@ -1,5 +1,7 @@
 package com.rideflow.modules.ride.usecase.command;
 
+import com.rideflow.modules.queue.dto.RideCreatedEvent;
+import com.rideflow.modules.queue.facade.QueueFacade;
 import com.rideflow.modules.ride.domain.Address;
 import com.rideflow.modules.ride.domain.Ride;
 import com.rideflow.modules.ride.domain.RideStatus;
@@ -27,6 +29,9 @@ class CreateRideUseCaseTest {
 
     @Mock
     private RideMapper rideMapper;
+
+    @Mock
+    private QueueFacade queueFacade;
 
     @InjectMocks
     private CreateRideUseCase createRideUseCase;
@@ -62,5 +67,6 @@ class CreateRideUseCaseTest {
         verify(rideMapper).toAddress(origin);
         verify(rideMapper).toAddress(destination);
         verify(rideRepository).save(any(Ride.class));
+        verify(queueFacade).publishRideCreated(any(RideCreatedEvent.class));
     }
 }

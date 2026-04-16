@@ -1,5 +1,6 @@
 package com.rideflow.modules.ride.usecase.command;
 
+import com.rideflow.modules.queue.facade.QueueFacade;
 import com.rideflow.modules.ride.domain.Ride;
 import com.rideflow.modules.ride.domain.RideStatus;
 import com.rideflow.modules.ride.repository.RideRepository;
@@ -22,6 +23,9 @@ class RejectRideUseCaseTest {
 
     @Mock
     private RideRepository rideRepository;
+
+    @Mock
+    private QueueFacade queueFacade;
 
     @InjectMocks
     private RejectRideUseCase rejectRideUseCase;

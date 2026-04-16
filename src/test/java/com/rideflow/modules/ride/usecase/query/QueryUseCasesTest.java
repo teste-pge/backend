@@ -1,5 +1,6 @@
 package com.rideflow.modules.ride.usecase.query;
 
+import com.rideflow.modules.cache.facade.CacheFacade;
 import com.rideflow.modules.ride.domain.Ride;
 import com.rideflow.modules.ride.domain.RideStatus;
 import com.rideflow.modules.ride.repository.RideRepository;
@@ -28,6 +29,9 @@ class QueryUseCasesTest {
     @Mock
     private RideRepository rideRepository;
 
+    @Mock
+    private CacheFacade cacheFacade;
+
     @InjectMocks
     private FindRideByIdUseCase findRideByIdUseCase;
 
@@ -42,6 +46,7 @@ class QueryUseCasesTest {
         UUID rideId = UUID.randomUUID();
         Ride ride = Ride.builder().id(rideId).build();
 
+        when(cacheFacade.findRideInProgress(rideId)).thenReturn(Optional.empty());
         when(rideRepository.findById(rideId)).thenReturn(Optional.of(ride));
 
         Ride result = findRideByIdUseCase.execute(rideId);
@@ -53,6 +58,7 @@ class QueryUseCasesTest {
     void findById_withNonExistingId_shouldThrowNotFound() {
         UUID rideId = UUID.randomUUID();
 
+        when(cacheFacade.findRideInProgress(rideId)).thenReturn(Optional.empty());
         when(rideRepository.findById(rideId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> findRideByIdUseCase.execute(rideId))
