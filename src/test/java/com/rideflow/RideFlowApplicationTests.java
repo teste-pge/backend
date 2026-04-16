@@ -33,6 +33,10 @@ class RideFlowApplicationTests {
     @MockBean
     private KafkaTemplate kafkaTemplate;
 
+    @SuppressWarnings("rawtypes")
+    @MockBean
+    private org.springframework.data.redis.core.RedisTemplate redisTemplate;
+
     @Test
     void contextLoads() {
     }
