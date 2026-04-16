@@ -37,6 +37,9 @@ class RideFlowApplicationTests {
     @MockBean
     private org.springframework.data.redis.core.RedisTemplate redisTemplate;
 
+    @MockBean
+    private org.springframework.kafka.core.KafkaAdmin kafkaAdmin;
+
     @Test
     void contextLoads() {
     }

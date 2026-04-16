@@ -115,6 +115,13 @@
             <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
 
+        <!-- ── LOGS ESTRUTURADOS (JSON em prod/docker) ──────────── -->
+        <dependency>
+            <groupId>net.logstash.logback</groupId>
+            <artifactId>logstash-logback-encoder</artifactId>
+            <version>7.4</version>
+        </dependency>
+
         <!-- ── DOCUMENTAÇÃO API ─────────────────────────────────── -->
         <dependency>
             <groupId>org.springdoc</groupId>
