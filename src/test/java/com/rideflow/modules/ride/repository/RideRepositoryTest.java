@@ -61,11 +61,7 @@ class RideRepositoryTest {
     }
 
     private Ride newRide() {
-        Ride ride = new Ride();
-        ride.setUserId(USER_ID);
-        ride.setOrigin(origin());
-        ride.setDestination(destination());
-        return ride;
+        return Ride.create(USER_ID, origin(), destination());
     }
 
     @BeforeEach
@@ -102,9 +98,13 @@ class RideRepositoryTest {
         rideRepository.save(newRide());
         rideRepository.save(newRide());
 
-        Ride accepted = newRide();
-        accepted.setDriverId(DRIVER_ID);
-        accepted.setStatus(RideStatus.ACCEPTED);
+        Ride accepted = Ride.builder()
+                .userId(USER_ID)
+                .origin(origin())
+                .destination(destination())
+                .driverId(DRIVER_ID)
+                .status(RideStatus.ACCEPTED)
+                .build();
         rideRepository.save(accepted);
 
         Page<Ride> pending = rideRepository.findByStatus(RideStatus.PENDING, PageRequest.of(0, 10));
@@ -121,8 +121,7 @@ class RideRepositoryTest {
         rideRepository.save(newRide());
         rideRepository.save(newRide());
 
-        Ride otherRide = newRide();
-        otherRide.setUserId(otherUser);
+        Ride otherRide = Ride.create(otherUser, origin(), destination());
         rideRepository.save(otherRide);
 
         Page<Ride> userRides = rideRepository.findByUserId(USER_ID, PageRequest.of(0, 10));
@@ -145,9 +144,13 @@ class RideRepositoryTest {
 
     @Test
     void findPendingRideForUpdate_shouldReturnEmpty_whenRideIsAlreadyAccepted() {
-        Ride ride = newRide();
-        ride.setDriverId(DRIVER_ID);
-        ride.setStatus(RideStatus.ACCEPTED);
+        Ride ride = Ride.builder()
+                .userId(USER_ID)
+                .origin(origin())
+                .destination(destination())
+                .driverId(DRIVER_ID)
+                .status(RideStatus.ACCEPTED)
+                .build();
         Ride saved = rideRepository.save(ride);
 
         Optional<Ride> found = rideRepository.findPendingRideForUpdate(saved.getId());

@@ -1,5 +1,6 @@
 package com.rideflow.modules.ride.domain;
 
+import com.rideflow.shared.exception.RideAlreadyAcceptedException;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -13,8 +14,9 @@ import java.util.UUID;
 @Entity
 @Table(name = "rides")
 @Getter
-@Setter
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@Builder
 @EqualsAndHashCode(of = "id")
 @ToString(exclude = {"origin", "destination"})
 public class Ride {
@@ -32,6 +34,7 @@ public class Ride {
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status", columnDefinition = "ride_status", nullable = false)
+    @Builder.Default
     private RideStatus status = RideStatus.PENDING;
 
     @Embedded
@@ -68,4 +71,23 @@ public class Ride {
 
     @Column(name = "accepted_at")
     private Instant acceptedAt;
+
+    // ── Domain Factory ─────────────────────────────────────
+    public static Ride create(UUID userId, Address origin, Address destination) {
+        return Ride.builder()
+                .userId(userId)
+                .origin(origin)
+                .destination(destination)
+                .build();
+    }
+
+    // ── Domain Behaviors ───────────────────────────────────
+    public void accept(UUID driverId) {
+        if (this.status != RideStatus.PENDING) {
+            throw new RideAlreadyAcceptedException(this.id.toString());
+        }
+        this.status = RideStatus.ACCEPTED;
+        this.driverId = driverId;
+        this.acceptedAt = Instant.now();
+    }
 }
