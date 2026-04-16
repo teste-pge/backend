@@ -19,16 +19,22 @@ CREATE TABLE rides (
     status          ride_status     NOT NULL DEFAULT 'PENDING',
 
     -- Endereço de origem (flattened — sem JOIN para leitura rápida)
-    origin_cep      VARCHAR(9)      NOT NULL,          -- formato: 00000-000
-    origin_street   VARCHAR(255)    NOT NULL,
-    origin_number   VARCHAR(20)     NOT NULL,
-    origin_state    CHAR(2)         NOT NULL,          -- sigla UF: SP, RJ, ...
+    origin_cep          VARCHAR(9)      NOT NULL,      -- formato: 00000-000
+    origin_logradouro   VARCHAR(255)    NOT NULL,
+    origin_numero       VARCHAR(20)     NOT NULL,
+    origin_complemento  VARCHAR(100),                  -- opcional
+    origin_bairro       VARCHAR(100)    NOT NULL,
+    origin_cidade       VARCHAR(100)    NOT NULL,
+    origin_estado       CHAR(2)         NOT NULL,      -- sigla UF: SP, RJ, ...
 
     -- Endereço de destino
-    dest_cep        VARCHAR(9)      NOT NULL,
-    dest_street     VARCHAR(255)    NOT NULL,
-    dest_number     VARCHAR(20)     NOT NULL,
-    dest_state      CHAR(2)         NOT NULL,
+    dest_cep            VARCHAR(9)      NOT NULL,
+    dest_logradouro     VARCHAR(255)    NOT NULL,
+    dest_numero         VARCHAR(20)     NOT NULL,
+    dest_complemento    VARCHAR(100),
+    dest_bairro         VARCHAR(100)    NOT NULL,
+    dest_cidade         VARCHAR(100)    NOT NULL,
+    dest_estado         CHAR(2)         NOT NULL,
 
     -- Auditoria
     created_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
@@ -37,10 +43,10 @@ CREATE TABLE rides (
 
     CONSTRAINT pk_rides PRIMARY KEY (id),
 
-    -- Garante que driver_id só existe quando status não é PENDING
+    -- Garante que driver_id é obrigatório quando a corrida foi aceita ou concluída
     CONSTRAINT chk_driver_on_accepted
         CHECK (
-            status = 'PENDING' OR driver_id IS NOT NULL
+            status NOT IN ('ACCEPTED', 'COMPLETED') OR driver_id IS NOT NULL
         )
 );
 
