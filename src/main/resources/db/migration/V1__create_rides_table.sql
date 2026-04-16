@@ -25,7 +25,7 @@ CREATE TABLE rides (
     origin_complemento  VARCHAR(100),                  -- opcional
     origin_bairro       VARCHAR(100)    NOT NULL,
     origin_cidade       VARCHAR(100)    NOT NULL,
-    origin_estado       CHAR(2)         NOT NULL,      -- sigla UF: SP, RJ, ...
+    origin_estado       VARCHAR(2)         NOT NULL,      -- sigla UF: SP, RJ, ...
 
     -- Endereço de destino
     dest_cep            VARCHAR(9)      NOT NULL,
@@ -34,7 +34,7 @@ CREATE TABLE rides (
     dest_complemento    VARCHAR(100),
     dest_bairro         VARCHAR(100)    NOT NULL,
     dest_cidade         VARCHAR(100)    NOT NULL,
-    dest_estado         CHAR(2)         NOT NULL,
+    dest_estado         VARCHAR(2)         NOT NULL,
 
     -- Auditoria
     created_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),

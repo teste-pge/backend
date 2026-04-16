@@ -67,46 +67,47 @@ services:
     networks:
       - rideflow-net
 
-  # ── Apache Kafka 3.6 (KRaft — sem Zookeeper) ─────────────────────────────────
+  # ── Apache Kafka 3.7 (KRaft — sem Zookeeper) ─────────────────────────────────
   #
   #  Dois listeners:
   #    INTERNAL://kafka:9092  — comunicação interna entre containers Docker
-  #    EXTERNAL://localhost:9092 — acesso direto do host (app rodando fora do Docker)
+  #    EXTERNAL://localhost:9094 — acesso direto do host (app rodando fora do Docker)
   #
   #  O container do backend sobrescreve via KAFKA_BOOTSTRAP_SERVERS=kafka:9092
   kafka:
-    image: bitnami/kafka:3.6
+    image: apache/kafka:3.7.0
     container_name: rideflow-kafka
     restart: unless-stopped
     env_file: .env
     environment:
       # KRaft: este nó é ao mesmo tempo broker e controller
-      KAFKA_CFG_NODE_ID: 1
-      KAFKA_CFG_PROCESS_ROLES: broker,controller
-      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
 
       # Dois listeners: interno (Docker) e externo (host)
-      KAFKA_CFG_LISTENERS: INTERNAL://:9092,EXTERNAL://:9094,CONTROLLER://:9093
-      KAFKA_CFG_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:9094
-      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
-      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: INTERNAL
-      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENERS: INTERNAL://:9092,EXTERNAL://:9094,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
 
       # Topics criados automaticamente (dev only — em produção use IaC)
-      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
-      KAFKA_CFG_NUM_PARTITIONS: 3
-      KAFKA_CFG_DEFAULT_REPLICATION_FACTOR: 1
-      KAFKA_CFG_LOG_RETENTION_HOURS: 24
-      KAFKA_CFG_LOG_SEGMENT_BYTES: 104857600 # 100 MB
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_LOG_RETENTION_HOURS: 24
+      KAFKA_LOG_SEGMENT_BYTES: 104857600 # 100 MB
+
+      # Cluster ID obrigatório para KRaft
+      CLUSTER_ID: "RideFlowKafkaCluster01"
     ports:
       - "9094:9094" # porta externa (host → Kafka)
-    volumes:
-      - kafka_data:/bitnami/kafka
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "kafka-topics.sh --bootstrap-server localhost:9092 --list > /dev/null 2>&1",
+          "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list > /dev/null 2>&1",
         ]
       interval: 15s
       timeout: 10s

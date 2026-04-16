@@ -18,6 +18,10 @@ import com.rideflow.modules.ride.usecase.query.FindRidesByStatusUseCase;
 import com.rideflow.modules.ride.usecase.query.FindRidesByUserQuery;
 import com.rideflow.modules.ride.usecase.query.FindRidesByUserUseCase;
 import com.rideflow.shared.response.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -32,6 +36,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/rides")
 @RequiredArgsConstructor
+@Tag(name = "Corridas", description = "Criação, consulta, aceitação e rejeição de corridas")
 public class RideController {
 
     private final CreateRideUseCase createRideUseCase;
@@ -43,6 +48,7 @@ public class RideController {
     private final RideMapper rideMapper;
 
     @PostMapping
+    @Operation(summary = "Criar corrida", description = "Cria uma nova corrida com status PENDING e publica evento no Kafka")
     public ResponseEntity<ApiResponse<RideResponse>> create(@Valid @RequestBody CreateRideRequest request) {
         final CreateRideCommand command = new CreateRideCommand(
                 request.userId(), request.origin(), request.destination());
@@ -55,6 +61,7 @@ public class RideController {
     }
 
     @GetMapping("/{rideId}")
+    @Operation(summary = "Buscar corrida por ID", description = "Consulta Redis (cache hit) ou PostgreSQL (cache miss)")
     public ResponseEntity<ApiResponse<RideResponse>> findById(@PathVariable UUID rideId) {
         final Ride ride = findRideByIdUseCase.execute(rideId);
         final RideResponse response = rideMapper.toRideResponse(ride);
@@ -63,6 +70,7 @@ public class RideController {
     }
 
     @GetMapping(params = "status")
+    @Operation(summary = "Listar corridas por status", description = "Retorna corridas filtradas por status com paginação")
     public ResponseEntity<ApiResponse<Page<RideResponse>>> findByStatus(
             @RequestParam RideStatus status,
             @PageableDefault(size = 20) Pageable pageable) {
@@ -75,6 +83,7 @@ public class RideController {
     }
 
     @GetMapping(params = "userId")
+    @Operation(summary = "Listar corridas por usuário", description = "Retorna corridas de um usuário específico com paginação")
     public ResponseEntity<ApiResponse<Page<RideResponse>>> findByUserId(
             @RequestParam UUID userId,
             @PageableDefault(size = 20) Pageable pageable) {
@@ -87,6 +96,7 @@ public class RideController {
     }
 
     @PostMapping("/{rideId}/accept")
+    @Operation(summary = "Aceitar corrida", description = "Motorista aceita corrida PENDING. Grava no Redis, publica no Kafka e notifica via SSE")
     public ResponseEntity<ApiResponse<RideResponse>> accept(
             @PathVariable UUID rideId,
             @Valid @RequestBody DriverActionRequest request) {
@@ -98,6 +108,7 @@ public class RideController {
     }
 
     @PostMapping("/{rideId}/reject")
+    @Operation(summary = "Rejeitar corrida", description = "Motorista rejeita corrida. Status permanece PENDING para outros motoristas")
     public ResponseEntity<ApiResponse<Void>> reject(
             @PathVariable UUID rideId,
             @Valid @RequestBody DriverActionRequest request) {
