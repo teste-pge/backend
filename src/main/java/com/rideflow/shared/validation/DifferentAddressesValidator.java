@@ -23,23 +23,32 @@ public class DifferentAddressesValidator implements ConstraintValidator<Differen
 
     @Override
     public boolean isValid(Object value, ConstraintValidatorContext context) {
-        if (value == null) return true;
+        if (value == null) {
+            return true;
+        }
 
         BeanWrapper wrapper = new BeanWrapperImpl(value);
-        var originCep = (String) wrapper.getPropertyValue(originCepField);
-        var originNumero = (String) wrapper.getPropertyValue(originNumeroField);
-        var destCep = (String) wrapper.getPropertyValue(destinationCepField);
-        var destNumero = (String) wrapper.getPropertyValue(destinationNumeroField);
 
-        if (originCep == null || destCep == null) return true;
+        try {
+            var originCep = (String) wrapper.getPropertyValue(originCepField);
+            var originNumero = (String) wrapper.getPropertyValue(originNumeroField);
+            var destCep = (String) wrapper.getPropertyValue(destinationCepField);
+            var destNumero = (String) wrapper.getPropertyValue(destinationNumeroField);
 
-        boolean sameAddress = originCep.equals(destCep) && Objects.equals(originNumero, destNumero);
-        if (sameAddress) {
-            context.disableDefaultConstraintViolation();
-            context.buildConstraintViolationWithTemplate(context.getDefaultConstraintMessageTemplate())
-                    .addPropertyNode("destination.cep")
-                    .addConstraintViolation();
+            if (originCep == null || destCep == null) {
+                return true;
+            }
+
+            boolean sameAddress = originCep.equals(destCep) && Objects.equals(originNumero, destNumero);
+            if (sameAddress) {
+                context.disableDefaultConstraintViolation();
+                context.buildConstraintViolationWithTemplate(context.getDefaultConstraintMessageTemplate())
+                        .addPropertyNode("destination.cep")
+                        .addConstraintViolation();
+            }
+            return !sameAddress;
+        } catch (Exception e) {
+            return true;
         }
-        return !sameAddress;
     }
 }
