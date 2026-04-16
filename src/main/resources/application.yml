@@ -1,0 +1,148 @@
+# ==============================================================================
+#  application.yml — Configurações BASE (compartilhadas por todos os perfis)
+#
+#  Perfil ativo é controlado pela variável de ambiente:
+#    SPRING_PROFILES_ACTIVE=dev   (padrão local)
+#    SPRING_PROFILES_ACTIVE=test  (testes automatizados com TestContainers)
+# ==============================================================================
+
+spring:
+  application:
+    name: rideflow-backend
+
+  # ── Perfil padrão (sobrescrito por variável de ambiente no Docker) ──────────
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  # ── Virtual Threads (Java 21) ───────────────────────────────────────────────
+  # Habilita Virtual Threads no Tomcat e nos executors do Spring.
+  # Elimina a necessidade de pool de threads para I/O-bound operations.
+  threads:
+    virtual:
+      enabled: true
+
+  # ── JPA / Hibernate ─────────────────────────────────────────────────────────
+  jpa:
+    # NUNCA abrir sessão por request — evita queries N+1 silenciosas
+    open-in-view: false
+    hibernate:
+      # "validate": Flyway gerencia o schema; Hibernate apenas valida
+      ddl-auto: validate
+    properties:
+      hibernate:
+        # Batch insert/update para performance em operações bulk
+        jdbc.batch_size: 25
+        order_inserts: true
+        order_updates: true
+        # Desabilitado em produção; habilitado por perfil em dev
+        format_sql: false
+
+  # ── Flyway ──────────────────────────────────────────────────────────────────
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    # baseline-on-migrate=false: falha se o schema não estiver limpo (seguro)
+    baseline-on-migrate: false
+    validate-on-migrate: true
+
+  # ── Jackson ─────────────────────────────────────────────────────────────────
+  jackson:
+    # Campos nulos são omitidos da resposta JSON
+    default-property-inclusion: non_null
+    serialization:
+      # Datas como ISO-8601 string, nunca como epoch number
+      write-dates-as-timestamps: false
+      write-durations-as-timestamps: false
+    deserialization:
+      # Campos desconhecidos não quebram a desserialização (tolerância a versão)
+      fail-on-unknown-properties: false
+    # Timezone padrão do Brasil
+    time-zone: America/Sao_Paulo
+
+# ==============================================================================
+#  SERVIDOR HTTP
+# ==============================================================================
+server:
+  port: ${SERVER_PORT:8080}
+  compression:
+    enabled: true
+    mime-types: application/json,application/javascript,text/css
+    min-response-size: 1024
+  # Nunca expor detalhes de erro no corpo da resposta HTTP (tratado pelo handler)
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false
+  # Timeout para SSE: evita que conexões abertas consumam recursos indefinidamente
+  tomcat:
+    connection-timeout: 20000
+    threads:
+      max: 200          # irrelevante com virtual threads, mas evita misconfiguration
+
+# ==============================================================================
+#  ACTUATOR / OBSERVABILIDADE
+# ==============================================================================
+management:
+  endpoints:
+    web:
+      # Expõe health, info, métricas e prometheus (para scraping)
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      # Detalha componentes apenas para requests autenticados (futuro)
+      show-details: always
+      show-components: always
+    prometheus:
+      enabled: true
+  health:
+    redis:
+      enabled: true
+    kafka:
+      enabled: true
+  # Métricas comuns: JVM, HTTP, HikariCP, Kafka
+  metrics:
+    tags:
+      application: ${spring.application.name}
+      environment: ${spring.profiles.active}
+
+# ==============================================================================
+#  SPRINGDOC / SWAGGER
+# ==============================================================================
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+    display-request-duration: true
+    show-extensions: true
+  default-produces-media-type: application/json
+
+# ==============================================================================
+#  LOGGING (base — perfis sobrescrevem o nível)
+# ==============================================================================
+logging:
+  level:
+    root: INFO
+    com.rideflow: INFO
+    org.springframework.kafka: WARN
+    org.apache.kafka: WARN
+    org.testcontainers: WARN
+    com.github.dockerjava: WARN
+  # Formato console legível no desenvolvimento; logback-spring.xml define JSON em prod
+  pattern:
+    console: "%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n%wEx"
+
+# ==============================================================================
+#  INFO DO SERVIÇO (exposto em /actuator/info)
+# ==============================================================================
+info:
+  app:
+    name: RideFlow
+    version: "@project.version@"
+    description: Sistema de corridas em tempo real
+    java-version: "@java.version@"

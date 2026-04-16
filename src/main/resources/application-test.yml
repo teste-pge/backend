@@ -1,0 +1,66 @@
+# ==============================================================================
+#  application-test.yml — Perfil de TESTES AUTOMATIZADOS
+#
+#  IMPORTANTE: datasource, Redis e Kafka NÃO são configurados aqui.
+#  As URLs são injetadas dinamicamente por @DynamicPropertySource em:
+#    - TestContainersConfig.java     (COMMIT 12)
+#    - RideRepositoryTest.java       (COMMIT 04)
+#    - RideFlowIntegrationTest.java  (COMMIT 12)
+#
+#  Usar @ActiveProfiles("test") nas classes de teste.
+# ==============================================================================
+
+spring:
+
+  # ── Flyway roda normalmente no container de teste ────────────────────────────
+  flyway:
+    enabled: true
+    validate-on-migrate: true
+
+  # ── Kafka: serializers configurados — URL sobrescrita via @DynamicPropertySource
+  kafka:
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      properties:
+        spring.json.add.type.headers: false
+        enable.idempotence: true
+    consumer:
+      group-id: rideflow-test-group
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.rideflow.*"
+    listener:
+      ack-mode: MANUAL_IMMEDIATE
+
+  # ── JPA silenciosa nos testes (ruído reduz legibilidade dos reports) ──────────
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+# ==============================================================================
+#  LOGGING — Silencioso nos testes: só erros e logs da app
+# ==============================================================================
+logging:
+  level:
+    root: WARN
+    com.rideflow: INFO
+    org.testcontainers: WARN
+    com.github.dockerjava: WARN
+    org.flywaydb: WARN
+    org.springframework.kafka: WARN
+
+# ==============================================================================
+#  ACTUATOR — desabilitar em testes para não conflitar com health checks
+# ==============================================================================
+management:
+  health:
+    kafka:
+      # Kafka health check pode falhar se o broker de teste ainda não estiver UP
+      enabled: false

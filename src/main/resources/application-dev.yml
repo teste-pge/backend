@@ -1,0 +1,91 @@
+# ==============================================================================
+#  application-dev.yml — Perfil de DESENVOLVIMENTO LOCAL
+#
+#  Pré-requisitos:
+#    docker-compose up postgres redis kafka   (COMMIT 03)
+#
+#  Variáveis de ambiente com fallback para valores locais padrão:
+#    DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASS
+#    REDIS_HOST, REDIS_PORT, REDIS_PASS
+#    KAFKA_BOOTSTRAP_SERVERS
+# ==============================================================================
+
+spring:
+
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:rideflow}
+    username: ${DB_USER:rideflow}
+    password: ${DB_PASS:rideflow}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      pool-name: RideFlow-HikariCP-Dev
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 300000        # 5 min
+      connection-timeout: 30000   # 30s
+      max-lifetime: 1800000       # 30 min
+      # Query de validação do pool
+      connection-test-query: SELECT 1
+
+  # ── Redis ───────────────────────────────────────────────────────────────────
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASS:rideflow}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 4
+          min-idle: 1
+          max-wait: 1000ms
+        # Reconexão automática se Redis reiniciar
+        shutdown-timeout: 200ms
+
+  # ── Kafka ───────────────────────────────────────────────────────────────────
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      # acks=all: aguarda confirmação de todas as réplicas (segurança)
+      acks: all
+      retries: 3
+      properties:
+        # Não adicionar type headers: evita problemas de desserialização entre versões
+        spring.json.add.type.headers: false
+        # Evitar duplicatas no produtor
+        enable.idempotence: true
+        max.in.flight.requests.per.connection: 5
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP:rideflow-dev-group}
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.rideflow.*"
+    # Listener container factory — configurado no KafkaConfig (COMMIT 08)
+    listener:
+      ack-mode: MANUAL_IMMEDIATE
+      concurrency: 3
+
+  # ── JPA: SQL visível no console em dev ──────────────────────────────────────
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+# ==============================================================================
+#  LOGGING — Mais verboso em dev para facilitar debug
+# ==============================================================================
+logging:
+  level:
+    com.rideflow: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE   # parâmetros dos prepared statements
+    org.springframework.kafka: INFO
+    org.flywaydb: INFO
