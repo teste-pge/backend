@@ -1,5 +1,6 @@
 package com.rideflow;
 
+import com.rideflow.modules.driver.repository.DriverRepository;
 import com.rideflow.modules.ride.repository.RideRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,6 +21,9 @@ import org.springframework.test.context.ActiveProfiles;
 )
 @ActiveProfiles("test")
 class RideFlowApplicationTests {
+
+    @MockBean
+    private DriverRepository driverRepository;
 
     @MockBean
     private RideRepository rideRepository;

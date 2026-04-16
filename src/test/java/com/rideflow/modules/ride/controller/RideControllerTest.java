@@ -1,10 +1,17 @@
 package com.rideflow.modules.ride.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rideflow.modules.ride.domain.Ride;
 import com.rideflow.modules.ride.domain.RideStatus;
 import com.rideflow.modules.ride.dto.AddressResponse;
 import com.rideflow.modules.ride.dto.RideResponse;
-import com.rideflow.modules.ride.facade.RideFacade;
+import com.rideflow.modules.ride.mapper.RideMapper;
+import com.rideflow.modules.ride.usecase.command.AcceptRideUseCase;
+import com.rideflow.modules.ride.usecase.command.CreateRideUseCase;
+import com.rideflow.modules.ride.usecase.command.RejectRideUseCase;
+import com.rideflow.modules.ride.usecase.query.FindRideByIdUseCase;
+import com.rideflow.modules.ride.usecase.query.FindRidesByStatusUseCase;
+import com.rideflow.modules.ride.usecase.query.FindRidesByUserUseCase;
 import com.rideflow.shared.exception.RideAlreadyAcceptedException;
 import com.rideflow.shared.exception.RideNotFoundException;
 import com.rideflow.shared.handler.GlobalExceptionHandler;
@@ -23,7 +30,6 @@ import java.util.UUID;
 
 import static org.hamcrest.Matchers.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -39,7 +45,25 @@ class RideControllerTest {
     private ObjectMapper objectMapper;
 
     @MockBean
-    private RideFacade rideFacade;
+    private CreateRideUseCase createRideUseCase;
+
+    @MockBean
+    private AcceptRideUseCase acceptRideUseCase;
+
+    @MockBean
+    private RejectRideUseCase rejectRideUseCase;
+
+    @MockBean
+    private FindRideByIdUseCase findRideByIdUseCase;
+
+    @MockBean
+    private FindRidesByStatusUseCase findRidesByStatusUseCase;
+
+    @MockBean
+    private FindRidesByUserUseCase findRidesByUserUseCase;
+
+    @MockBean
+    private RideMapper rideMapper;
 
     private static final UUID RIDE_ID = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
     private static final UUID USER_ID = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
@@ -63,7 +87,9 @@ class RideControllerTest {
 
     @Test
     void createRide_valid_shouldReturn201() throws Exception {
-        when(rideFacade.createRide(any())).thenReturn(sampleRideResponse(RideStatus.PENDING));
+        Ride dummyRide = Ride.builder().id(RIDE_ID).userId(USER_ID).status(RideStatus.PENDING).build();
+        when(createRideUseCase.execute(any())).thenReturn(dummyRide);
+        when(rideMapper.toRideResponse(any(Ride.class))).thenReturn(sampleRideResponse(RideStatus.PENDING));
 
         String body = """
                 {
@@ -106,7 +132,9 @@ class RideControllerTest {
 
     @Test
     void findById_existing_shouldReturn200() throws Exception {
-        when(rideFacade.findById(RIDE_ID)).thenReturn(sampleRideResponse(RideStatus.PENDING));
+        Ride dummyRide = Ride.builder().id(RIDE_ID).userId(USER_ID).status(RideStatus.PENDING).build();
+        when(findRideByIdUseCase.execute(RIDE_ID)).thenReturn(dummyRide);
+        when(rideMapper.toRideResponse(any(Ride.class))).thenReturn(sampleRideResponse(RideStatus.PENDING));
 
         mockMvc.perform(get("/api/v1/rides/{rideId}", RIDE_ID))
                 .andExpect(status().isOk())
@@ -116,7 +144,7 @@ class RideControllerTest {
 
     @Test
     void findById_notFound_shouldReturn404() throws Exception {
-        when(rideFacade.findById(RIDE_ID)).thenThrow(new RideNotFoundException(RIDE_ID.toString()));
+        when(findRideByIdUseCase.execute(RIDE_ID)).thenThrow(new RideNotFoundException(RIDE_ID.toString()));
 
         mockMvc.perform(get("/api/v1/rides/{rideId}", RIDE_ID))
                 .andExpect(status().isNotFound())
@@ -126,11 +154,10 @@ class RideControllerTest {
 
     @Test
     void findByStatus_shouldReturn200WithPage() throws Exception {
-        var page = new PageImpl<>(
-                List.of(sampleRideResponse(RideStatus.PENDING)),
-                PageRequest.of(0, 20), 1);
-
-        when(rideFacade.findByStatus(eq(RideStatus.PENDING), any())).thenReturn(page);
+        Ride dummyRide = Ride.builder().id(RIDE_ID).userId(USER_ID).status(RideStatus.PENDING).build();
+        var page = new PageImpl<>(List.of(dummyRide), PageRequest.of(0, 20), 1);
+        when(findRidesByStatusUseCase.execute(any())).thenReturn(page);
+        when(rideMapper.toRideResponse(any(Ride.class))).thenReturn(sampleRideResponse(RideStatus.PENDING));
 
         mockMvc.perform(get("/api/v1/rides")
                 .param("status", "PENDING")
@@ -144,7 +171,9 @@ class RideControllerTest {
 
     @Test
     void acceptRide_pending_shouldReturn200() throws Exception {
-        when(rideFacade.acceptRide(RIDE_ID, DRIVER_ID)).thenReturn(sampleRideResponse(RideStatus.ACCEPTED));
+        Ride dummyRide = Ride.builder().id(RIDE_ID).userId(USER_ID).driverId(DRIVER_ID).status(RideStatus.ACCEPTED).build();
+        when(acceptRideUseCase.execute(any())).thenReturn(dummyRide);
+        when(rideMapper.toRideResponse(any(Ride.class))).thenReturn(sampleRideResponse(RideStatus.ACCEPTED));
 
         String body = """
                 { "driverId": "%s" }
@@ -160,7 +189,7 @@ class RideControllerTest {
 
     @Test
     void acceptRide_alreadyAccepted_shouldReturn409() throws Exception {
-        when(rideFacade.acceptRide(RIDE_ID, DRIVER_ID))
+        when(acceptRideUseCase.execute(any()))
                 .thenThrow(new RideAlreadyAcceptedException(RIDE_ID.toString()));
 
         String body = """
@@ -177,7 +206,7 @@ class RideControllerTest {
 
     @Test
     void rejectRide_shouldReturn200() throws Exception {
-        doNothing().when(rideFacade).rejectRide(RIDE_ID, DRIVER_ID);
+        doNothing().when(rejectRideUseCase).execute(any());
 
         String body = """
                 { "driverId": "%s" }

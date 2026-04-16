@@ -4,7 +4,6 @@ import com.rideflow.modules.ride.domain.Address;
 import com.rideflow.modules.ride.domain.Ride;
 import com.rideflow.modules.ride.domain.RideStatus;
 import com.rideflow.modules.ride.dto.AddressRequest;
-import com.rideflow.modules.ride.dto.CreateRideRequest;
 import com.rideflow.modules.ride.mapper.RideMapper;
 import com.rideflow.modules.ride.repository.RideRepository;
 import org.junit.jupiter.api.Test;
@@ -38,7 +37,7 @@ class CreateRideUseCaseTest {
                 "01310-100", "Av Paulista", "1000", null, "Bela Vista", "São Paulo", "SP");
         AddressRequest destination = new AddressRequest(
                 "04543-907", "Av Faria Lima", "3477", null, "Itaim Bibi", "São Paulo", "SP");
-        CreateRideRequest request = new CreateRideRequest(UUID.randomUUID(), origin, destination);
+        CreateRideCommand command = new CreateRideCommand(UUID.randomUUID(), origin, destination);
 
         Address originAddr = new Address("01310-100", "Av Paulista", "1000", null, "Bela Vista", "São Paulo", "SP");
         Address destAddr = new Address("04543-907", "Av Faria Lima", "3477", null, "Itaim Bibi", "São Paulo", "SP");
@@ -48,7 +47,7 @@ class CreateRideUseCaseTest {
 
         Ride savedRide = Ride.builder()
                 .id(UUID.randomUUID())
-                .userId(request.userId())
+                .userId(command.userId())
                 .origin(originAddr)
                 .destination(destAddr)
                 .status(RideStatus.PENDING)
@@ -56,7 +55,7 @@ class CreateRideUseCaseTest {
 
         when(rideRepository.save(any(Ride.class))).thenReturn(savedRide);
 
-        Ride result = createRideUseCase.execute(request);
+        Ride result = createRideUseCase.execute(command);
 
         assertThat(result.getId()).isNotNull();
         assertThat(result.getStatus()).isEqualTo(RideStatus.PENDING);

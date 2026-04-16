@@ -7,6 +7,7 @@ import com.rideflow.modules.ride.dto.RideResponse;
 import com.rideflow.modules.ride.mapper.RideMapper;
 import com.rideflow.modules.ride.usecase.command.AcceptRideCommand;
 import com.rideflow.modules.ride.usecase.command.AcceptRideUseCase;
+import com.rideflow.modules.ride.usecase.command.CreateRideCommand;
 import com.rideflow.modules.ride.usecase.command.CreateRideUseCase;
 import com.rideflow.modules.ride.usecase.command.RejectRideCommand;
 import com.rideflow.modules.ride.usecase.command.RejectRideUseCase;
@@ -36,14 +37,16 @@ public class RideFacadeImpl implements RideFacade {
 
     @Override
     public RideResponse createRide(CreateRideRequest request) {
-        Ride ride = createRideUseCase.execute(request);
+        final CreateRideCommand command = new CreateRideCommand(
+                request.userId(), request.origin(), request.destination());
+        final Ride ride = createRideUseCase.execute(command);
 
         return rideMapper.toRideResponse(ride);
     }
 
     @Override
     public RideResponse findById(UUID rideId) {
-        Ride ride = findRideByIdUseCase.execute(rideId);
+        final Ride ride = findRideByIdUseCase.execute(rideId);
 
         return rideMapper.toRideResponse(ride);
     }
@@ -64,7 +67,7 @@ public class RideFacadeImpl implements RideFacade {
 
     @Override
     public RideResponse acceptRide(UUID rideId, UUID driverId) {
-        Ride ride = acceptRideUseCase.execute(new AcceptRideCommand(rideId, driverId));
+        final Ride ride = acceptRideUseCase.execute(new AcceptRideCommand(rideId, driverId));
 
         return rideMapper.toRideResponse(ride);
     }

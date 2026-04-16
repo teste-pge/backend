@@ -71,3 +71,6 @@ Desktop.ini
 *.swp
 *.swo
 *~
+
+# Docker
+.docker/dbdata
