@@ -1,0 +1,73 @@
+# ==============================================================================
+#  .gitignore — RideFlow Backend (Java 21 + Maven + IntelliJ / VS Code)
+# ==============================================================================
+
+# ── Maven ──────────────────────────────────────────────────────────────────────
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# ── IDE — IntelliJ IDEA ────────────────────────────────────────────────────────
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# ── IDE — VS Code ──────────────────────────────────────────────────────────────
+.vscode/
+*.code-workspace
+
+# ── IDE — Eclipse ──────────────────────────────────────────────────────────────
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache
+
+# ── IDE — NetBeans ─────────────────────────────────────────────────────────────
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# ── Spring Boot ────────────────────────────────────────────────────────────────
+HELP.md
+spring-shell.log
+
+# ── Logs ───────────────────────────────────────────────────────────────────────
+*.log
+logs/
+log/
+
+# ── JaCoCo ─────────────────────────────────────────────────────────────────────
+jacoco.exec
+target/site/jacoco/
+
+# ── Docker ─────────────────────────────────────────────────────────────────────
+# Não ignora docker-compose.yml (commitado) — ignora apenas sobrescritas locais
+docker-compose.override.yml
+
+# ── Variáveis de ambiente ───────────────────────────────────────────────────────
+.env
+# .env.example NÃO é ignorado (deve ser commitado como template)
+
+# ── OS ─────────────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ── Arquivos temporários ────────────────────────────────────────────────────────
+*.tmp
+*.swp
+*.swo
+*~
