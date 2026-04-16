@@ -1,0 +1,168 @@
+# ==============================================================================
+#  docker-compose.yml — Infraestrutura local de desenvolvimento
+#
+#  Serviços:
+#    postgres  — PostgreSQL 15 (porta 5432)
+#    redis     — Redis 7       (porta 6379)
+#    kafka     — Kafka 3.6 KRaft, sem Zookeeper (porta 9092)
+#    backend   — Spring Boot app (porta 8080)
+#
+#  Uso comum (infra apenas, app roda local):
+#    docker-compose up postgres redis kafka
+#
+#  Uso completo (tudo conteinerizado):
+#    docker-compose up --build
+#
+#  Variáveis de ambiente: copie .env.example para .env e ajuste se necessário.
+# ==============================================================================
+
+services:
+  # ── PostgreSQL 15 ────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: rideflow-postgres
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - rideflow-net
+
+  # ── Redis 7 ──────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: rideflow-redis
+    restart: unless-stopped
+    env_file: .env
+    # requirepass via command — evita expor senha em variável de ambiente visível
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASS}
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save 60 1
+      --loglevel warning
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASS}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - rideflow-net
+
+  # ── Apache Kafka 3.6 (KRaft — sem Zookeeper) ─────────────────────────────────
+  #
+  #  Dois listeners:
+  #    INTERNAL://kafka:9092  — comunicação interna entre containers Docker
+  #    EXTERNAL://localhost:9092 — acesso direto do host (app rodando fora do Docker)
+  #
+  #  O container do backend sobrescreve via KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+  kafka:
+    image: bitnami/kafka:3.6
+    container_name: rideflow-kafka
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # KRaft: este nó é ao mesmo tempo broker e controller
+      KAFKA_CFG_NODE_ID: 1
+      KAFKA_CFG_PROCESS_ROLES: broker,controller
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+
+      # Dois listeners: interno (Docker) e externo (host)
+      KAFKA_CFG_LISTENERS: INTERNAL://:9092,EXTERNAL://:9094,CONTROLLER://:9093
+      KAFKA_CFG_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+
+      # Topics criados automaticamente (dev only — em produção use IaC)
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_CFG_NUM_PARTITIONS: 3
+      KAFKA_CFG_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_CFG_LOG_RETENTION_HOURS: 24
+      KAFKA_CFG_LOG_SEGMENT_BYTES: 104857600 # 100 MB
+    ports:
+      - "9094:9094" # porta externa (host → Kafka)
+    volumes:
+      - kafka_data:/bitnami/kafka
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "kafka-topics.sh --bootstrap-server localhost:9092 --list > /dev/null 2>&1",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - rideflow-net
+
+  # ── Backend Spring Boot ───────────────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: rideflow-backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SERVER_PORT: 8080
+
+      # Sobrescreve os defaults do application-dev.yml para resolução interna Docker
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASS: ${REDIS_PASS}
+
+      # Usa listener INTERNO do Kafka (containers na mesma rede)
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - rideflow-net
+
+# ── Volumes nomeados ──────────────────────────────────────────────────────────
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  kafka_data:
+    driver: local
+
+# ── Rede isolada ─────────────────────────────────────────────────────────────
+networks:
+  rideflow-net:
+    driver: bridge
