@@ -24,4 +24,9 @@ public class KafkaConfig {
     public NewTopic rideRejectedTopic() {
         return TopicBuilder.name("ride.rejected").partitions(3).replicas(1).build();
     }
+
+    @Bean
+    public NewTopic rideCompletedTopic() {
+        return TopicBuilder.name("ride.completed").partitions(3).replicas(1).build();
+    }
 }

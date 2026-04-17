@@ -1,6 +1,7 @@
 package com.rideflow.modules.queue.facade;
 
 import com.rideflow.modules.queue.dto.RideAcceptedEvent;
+import com.rideflow.modules.queue.dto.RideCompletedEvent;
 import com.rideflow.modules.queue.dto.RideCreatedEvent;
 import com.rideflow.modules.queue.dto.RideRejectedEvent;
 import com.rideflow.modules.queue.producer.RideEventProducer;
@@ -26,5 +27,10 @@ public class QueueFacadeImpl implements QueueFacade {
     @Override
     public void publishRideRejected(RideRejectedEvent event) {
         rideEventProducer.publishRideRejected(event);
+    }
+
+    @Override
+    public void publishRideCompleted(RideCompletedEvent event) {
+        rideEventProducer.publishRideCompleted(event);
     }
 }

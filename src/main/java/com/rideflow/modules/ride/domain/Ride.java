@@ -90,4 +90,11 @@ public class Ride {
         this.driverId = driverId;
         this.acceptedAt = Instant.now();
     }
+
+    public void complete() {
+        if (this.status != RideStatus.ACCEPTED) {
+            throw new IllegalStateException("Corrida " + this.id + " não está ACCEPTED para ser completada");
+        }
+        this.status = RideStatus.COMPLETED;
+    }
 }

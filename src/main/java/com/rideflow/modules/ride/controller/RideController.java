@@ -6,12 +6,8 @@ import com.rideflow.modules.ride.dto.CreateRideRequest;
 import com.rideflow.modules.ride.dto.DriverActionRequest;
 import com.rideflow.modules.ride.dto.RideResponse;
 import com.rideflow.modules.ride.mapper.RideMapper;
-import com.rideflow.modules.ride.usecase.command.AcceptRideCommand;
-import com.rideflow.modules.ride.usecase.command.AcceptRideUseCase;
-import com.rideflow.modules.ride.usecase.command.CreateRideCommand;
-import com.rideflow.modules.ride.usecase.command.CreateRideUseCase;
-import com.rideflow.modules.ride.usecase.command.RejectRideCommand;
-import com.rideflow.modules.ride.usecase.command.RejectRideUseCase;
+import com.rideflow.modules.ride.repository.RideRepository;
+import com.rideflow.modules.ride.usecase.command.*;
 import com.rideflow.modules.ride.usecase.query.FindRideByIdUseCase;
 import com.rideflow.modules.ride.usecase.query.FindRidesByStatusQuery;
 import com.rideflow.modules.ride.usecase.query.FindRidesByStatusUseCase;
@@ -42,9 +38,11 @@ public class RideController {
     private final CreateRideUseCase createRideUseCase;
     private final AcceptRideUseCase acceptRideUseCase;
     private final RejectRideUseCase rejectRideUseCase;
+    private final CompleteRideUseCase completeRideUseCase;
     private final FindRideByIdUseCase findRideByIdUseCase;
     private final FindRidesByStatusUseCase findRidesByStatusUseCase;
     private final FindRidesByUserUseCase findRidesByUserUseCase;
+    private final RideRepository rideRepository;
     private final RideMapper rideMapper;
 
     @PostMapping
@@ -116,5 +114,33 @@ public class RideController {
         rejectRideUseCase.execute(new RejectRideCommand(rideId, request.driverId()));
 
         return ResponseEntity.ok(ApiResponse.noContent("Corrida rejeitada com sucesso"));
+    }
+
+    @PostMapping("/{rideId}/complete")
+    @Operation(summary = "Completar corrida", description = "Motorista marca corrida ACCEPTED como COMPLETED")
+    public ResponseEntity<ApiResponse<RideResponse>> complete(
+            @PathVariable UUID rideId,
+            @Valid @RequestBody DriverActionRequest request) {
+
+        final Ride ride = completeRideUseCase.execute(new CompleteRideCommand(rideId, request.driverId()));
+        final RideResponse response = rideMapper.toRideResponse(ride);
+
+        return ResponseEntity.ok(ApiResponse.of("Corrida completada com sucesso", response));
+    }
+
+    @GetMapping("/active/user/{userId}")
+    @Operation(summary = "Buscar corrida ativa do passageiro", description = "Retorna corrida PENDING ou ACCEPTED do passageiro")
+    public ResponseEntity<ApiResponse<RideResponse>> findActiveByUser(@PathVariable UUID userId) {
+        return rideRepository.findActiveByUserId(userId)
+                .map(ride -> ResponseEntity.ok(ApiResponse.of(rideMapper.toRideResponse(ride))))
+                .orElse(ResponseEntity.ok(ApiResponse.of("Nenhuma corrida ativa", null)));
+    }
+
+    @GetMapping("/active/driver/{driverId}")
+    @Operation(summary = "Buscar corrida ativa do motorista", description = "Retorna corrida ACCEPTED do motorista")
+    public ResponseEntity<ApiResponse<RideResponse>> findActiveByDriver(@PathVariable UUID driverId) {
+        return rideRepository.findActiveByDriverId(driverId)
+                .map(ride -> ResponseEntity.ok(ApiResponse.of(rideMapper.toRideResponse(ride))))
+                .orElse(ResponseEntity.ok(ApiResponse.of("Nenhuma corrida ativa", null)));
     }
 }

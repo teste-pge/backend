@@ -23,7 +23,7 @@
 │       │                       │                       │         │
 │       │ Facade          ┌──────────┐                  │ SSE     │
 │       └───────────────► │  cache   │                  ▼         │
-│       │                 └──────────┘             [Motorista]    │
+│       │                 └──────────┘          [Motorista/Pass.] │
 │       │ Facade                                                  │
 │       ▼                                                         │
 │  ┌──────────┐                                                   │
@@ -81,7 +81,8 @@ Nunca importar implementações concretas entre módulos.
 docker compose up -d postgres redis kafka
 ```
 
-> Kafka usa **KRaft** — sem Zookeeper.
+> Kafka usa **KRaft** — sem Zookeeper.  
+> Tópicos: `ride.created`, `ride.accepted`, `ride.rejected`, `ride.completed` (3 partições cada).
 
 ### 2. Aplicação
 
@@ -159,13 +160,24 @@ Os testes de integração sobem PostgreSQL e Kafka via TestContainers automatica
 2. POST /rides/{id}/accept (aceitar corrida)
    └─► Lock pessimista ─► DB (ACCEPTED) ─► Redis cache ─► Kafka [ride.accepted]
                                                           └─► Consumer ─► SSE (motorista específico)
+                                                          └─► Consumer ─► SSE (passageiro: RIDE_ACCEPTED)
 
 3. POST /rides/{id}/reject (rejeitar corrida)
    └─► Kafka [ride.rejected] ─► (status permanece PENDING para outros motoristas)
 
-4. GET /rides/{id} (buscar corrida)
+4. POST /rides/{id}/complete (finalizar corrida)
+   └─► DB (COMPLETED) ─► Redis evict ─► Kafka [ride.completed]
+                                         └─► Consumer ─► SSE (passageiro: RIDE_COMPLETED)
+
+5. GET /rides/{id} (buscar corrida)
    └─► Redis (cache hit?) ─► sim: retorna direto
                            └─► não: PostgreSQL ─► retorna
+
+6. GET /rides/active/user/{userId} (corrida ativa do passageiro)
+   └─► DB (status IN PENDING, ACCEPTED) ─► retorna
+
+7. GET /rides/active/driver/{driverId} (corrida ativa do motorista)
+   └─► DB (status = ACCEPTED, driverId = ?) ─► retorna
 ```
 
 ---
@@ -204,6 +216,9 @@ Copie `.env.example` para `.env` e ajuste conforme necessário.
 | GET    | `/api/v1/rides?userId={uuid}`         | Listar corridas por usuário        | 200     |
 | POST   | `/api/v1/rides/{rideId}/accept`       | Motorista aceita corrida           | 200     |
 | POST   | `/api/v1/rides/{rideId}/reject`       | Motorista rejeita corrida          | 200     |
+| POST   | `/api/v1/rides/{rideId}/complete`     | Motorista finaliza corrida         | 200     |
+| GET    | `/api/v1/rides/active/user/{userId}`  | Corrida ativa do passageiro        | 200     |
+| GET    | `/api/v1/rides/active/driver/{driverId}` | Corrida ativa do motorista      | 200     |
 
 ### Motoristas
 
@@ -217,7 +232,8 @@ Copie `.env.example` para `.env` e ajuste conforme necessário.
 
 | Método | Endpoint                                       | Descrição                    | Tipo     |
 |--------|-------------------------------------------------|------------------------------|----------|
-| GET    | `/api/v1/notifications/drivers/{driverId}/stream` | Stream SSE de notificações | SSE      |
+| GET    | `/api/v1/notifications/drivers/{driverId}/stream`    | SSE notificações do motorista  | SSE      |
+| GET    | `/api/v1/notifications/passengers/{userId}/stream`   | SSE notificações do passageiro | SSE      |
 
 ### Observabilidade
 
@@ -237,7 +253,8 @@ Copie `.env.example` para `.env` e ajuste conforme necessário.
 | `rides.created.total`       | Counter | Total de corridas criadas         |
 | `rides.accepted.total`      | Counter | Total de corridas aceitas         |
 | `rides.rejected.total`      | Counter | Total de corridas rejeitadas      |
-| `sse.connections.active`    | Gauge   | Conexões SSE ativas               |
+| `rides.completed.total`     | Counter | Total de corridas finalizadas     |
+| `sse.connections.active`    | Gauge   | Conexões SSE ativas (motoristas + passageiros) |
 | `kafka.publish.failures`    | Counter | Falhas de publicação no Kafka     |
 ---
 

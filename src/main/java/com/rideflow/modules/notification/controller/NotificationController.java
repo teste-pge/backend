@@ -44,4 +44,25 @@ public class NotificationController {
 
         return emitter;
     }
+
+    @GetMapping(value = "/passengers/{userId}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(summary = "Stream de notificações do passageiro",
+            description = "Abre conexão SSE para receber notificações de status da corrida: RIDE_ACCEPTED, RIDE_COMPLETED")
+    public SseEmitter streamPassengerNotifications(@PathVariable UUID userId) {
+        SseEmitter emitter = emitterRegistry.registerPassenger(userId);
+
+        try {
+            emitter.send(SseEmitter.event()
+                    .name("CONNECTED")
+                    .data(Map.of(
+                            "message", "Conexão estabelecida",
+                            "userId", userId.toString(),
+                            "timestamp", Instant.now().toString()
+                    )));
+        } catch (IOException e) {
+            emitter.completeWithError(e);
+        }
+
+        return emitter;
+    }
 }
