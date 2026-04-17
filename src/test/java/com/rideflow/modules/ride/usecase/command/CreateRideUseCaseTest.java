@@ -58,7 +58,7 @@ class CreateRideUseCaseTest {
                 .status(RideStatus.PENDING)
                 .build();
 
-        when(rideRepository.save(any(Ride.class))).thenReturn(savedRide);
+        when(rideRepository.saveAndFlush(any(Ride.class))).thenReturn(savedRide);
 
         Ride result = createRideUseCase.execute(command);
 
@@ -66,7 +66,7 @@ class CreateRideUseCaseTest {
         assertThat(result.getStatus()).isEqualTo(RideStatus.PENDING);
         verify(rideMapper).toAddress(origin);
         verify(rideMapper).toAddress(destination);
-        verify(rideRepository).save(any(Ride.class));
+        verify(rideRepository).saveAndFlush(any(Ride.class));
         verify(queueFacade).publishRideCreated(any(RideCreatedEvent.class));
     }
 }

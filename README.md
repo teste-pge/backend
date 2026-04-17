@@ -7,7 +7,7 @@
 [![Kafka](https://img.shields.io/badge/Kafka-3.6-231F20?logo=apachekafka)](https://kafka.apache.org/)
 [![Redis](https://img.shields.io/badge/Redis-7-DC382D?logo=redis)](https://redis.io/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-336791?logo=postgresql)](https://www.postgresql.org/)
-[![Tests](https://img.shields.io/badge/Tests-66%20green-brightgreen)]()
+[![Tests](https://img.shields.io/badge/Tests-76%20green-brightgreen)]()
 
 ---
 

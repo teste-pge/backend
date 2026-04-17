@@ -8,7 +8,9 @@ import com.rideflow.modules.ride.dto.RideResponse;
 import com.rideflow.modules.ride.mapper.RideMapper;
 import com.rideflow.modules.ride.usecase.command.AcceptRideUseCase;
 import com.rideflow.modules.ride.usecase.command.CreateRideUseCase;
+import com.rideflow.modules.ride.usecase.command.CompleteRideUseCase;
 import com.rideflow.modules.ride.usecase.command.RejectRideUseCase;
+import com.rideflow.modules.ride.repository.RideRepository;
 import com.rideflow.modules.ride.usecase.query.FindRideByIdUseCase;
 import com.rideflow.modules.ride.usecase.query.FindRidesByStatusUseCase;
 import com.rideflow.modules.ride.usecase.query.FindRidesByUserUseCase;
@@ -61,6 +63,12 @@ class RideControllerTest {
 
     @MockBean
     private FindRidesByUserUseCase findRidesByUserUseCase;
+
+    @MockBean
+    private CompleteRideUseCase completeRideUseCase;
+
+    @MockBean
+    private RideRepository rideRepository;
 
     @MockBean
     private RideMapper rideMapper;
@@ -218,5 +226,63 @@ class RideControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("Corrida rejeitada com sucesso"));
+    }
+
+    @Test
+    void completeRide_shouldReturn200() throws Exception {
+        Ride dummyRide = Ride.builder().id(RIDE_ID).userId(USER_ID).driverId(DRIVER_ID).status(RideStatus.COMPLETED).build();
+        when(completeRideUseCase.execute(any())).thenReturn(dummyRide);
+        when(rideMapper.toRideResponse(any(Ride.class))).thenReturn(sampleRideResponse(RideStatus.COMPLETED));
+
+        String body = """
+                { "driverId": "%s" }
+                """.formatted(DRIVER_ID);
+
+        mockMvc.perform(post("/api/v1/rides/{rideId}/complete", RIDE_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("COMPLETED"));
+    }
+
+    @Test
+    void findActiveByUser_existing_shouldReturn200() throws Exception {
+        Ride dummyRide = Ride.builder().id(RIDE_ID).userId(USER_ID).status(RideStatus.PENDING).build();
+        when(rideRepository.findActiveByUserId(USER_ID)).thenReturn(java.util.Optional.of(dummyRide));
+        when(rideMapper.toRideResponse(any(Ride.class))).thenReturn(sampleRideResponse(RideStatus.PENDING));
+
+        mockMvc.perform(get("/api/v1/rides/active/user/{userId}", USER_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(RIDE_ID.toString()));
+    }
+
+    @Test
+    void findActiveByUser_notFound_shouldReturn200WithNull() throws Exception {
+        when(rideRepository.findActiveByUserId(USER_ID)).thenReturn(java.util.Optional.empty());
+
+        mockMvc.perform(get("/api/v1/rides/active/user/{userId}", USER_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Nenhuma corrida ativa"));
+    }
+
+    @Test
+    void findActiveByDriver_existing_shouldReturn200() throws Exception {
+        Ride dummyRide = Ride.builder().id(RIDE_ID).userId(USER_ID).driverId(DRIVER_ID).status(RideStatus.ACCEPTED).build();
+        when(rideRepository.findActiveByDriverId(DRIVER_ID)).thenReturn(java.util.Optional.of(dummyRide));
+        when(rideMapper.toRideResponse(any(Ride.class))).thenReturn(sampleRideResponse(RideStatus.ACCEPTED));
+
+        mockMvc.perform(get("/api/v1/rides/active/driver/{driverId}", DRIVER_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("ACCEPTED"));
+    }
+
+    @Test
+    void findByUserId_shouldReturn200() throws Exception {
+        when(findRidesByUserUseCase.execute(any())).thenReturn(org.springframework.data.domain.Page.empty());
+
+        mockMvc.perform(get("/api/v1/rides")
+                .param("userId", USER_ID.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
     }
 }
