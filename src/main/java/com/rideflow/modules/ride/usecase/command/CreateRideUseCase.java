@@ -29,7 +29,7 @@ public class CreateRideUseCase implements UseCase<CreateRideCommand, Ride> {
         final Address destination = rideMapper.toAddress(input.destination());
 
         final Ride ride = Ride.create(input.userId(), origin, destination);
-        final Ride saved = rideRepository.save(ride);
+        final Ride saved = rideRepository.saveAndFlush(ride);
 
         queueFacade.publishRideCreated(new RideCreatedEvent(
                 saved.getId(),

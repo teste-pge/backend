@@ -54,8 +54,6 @@ spring:
       acks: all
       retries: 3
       properties:
-        # Não adicionar type headers: evita problemas de desserialização entre versões
-        spring.json.add.type.headers: false
         # Evitar duplicatas no produtor
         enable.idempotence: true
         max.in.flight.requests.per.connection: 5
@@ -64,28 +62,29 @@ spring:
       auto-offset-reset: earliest
       enable-auto-commit: false
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
       properties:
         spring.json.trusted.packages: "com.rideflow.*"
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
     # Listener container factory — configurado no KafkaConfig (COMMIT 08)
     listener:
       ack-mode: MANUAL_IMMEDIATE
       concurrency: 3
 
-  # ── JPA: SQL visível no console em dev ──────────────────────────────────────
+  # ── JPA ──────────────────────────────────────────────────────────────────────
   jpa:
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
 
 # ==============================================================================
-#  LOGGING — Mais verboso em dev para facilitar debug
+#  LOGGING
 # ==============================================================================
 logging:
   level:
     com.rideflow: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.orm.jdbc.bind: TRACE   # parâmetros dos prepared statements
+    org.hibernate.SQL: WARN
+    org.hibernate.orm.jdbc.bind: WARN
     org.springframework.kafka: INFO
     org.flywaydb: INFO

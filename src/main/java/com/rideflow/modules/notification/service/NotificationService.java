@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.Map;
 
 @Slf4j
@@ -23,7 +24,7 @@ public class NotificationService {
                 "originDisplay", event.originDisplay(),
                 "destinationDisplay", event.destinationDisplay(),
                 "status", event.status(),
-                "createdAt", event.createdAt().toString()
+                "createdAt", event.createdAt() != null ? event.createdAt().toString() : Instant.now().toString()
         );
 
         emitterRegistry.broadcast("NEW_RIDE", payload);

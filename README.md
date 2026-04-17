@@ -92,7 +92,20 @@ cd backend
 
 A aplicação estará disponível em `http://localhost:8080`.
 
-### 3. Verificar saúde
+### 3. Stack completa via Docker Compose
+
+```bash
+# Subir tudo (PostgreSQL + Redis + Kafka + Backend + Frontend)
+docker compose up -d --build
+
+# Ver logs do backend
+docker logs -f rideflow-backend
+
+# Parar tudo
+docker compose down
+```
+
+### 4. Verificar saúde
 
 ```bash
 curl http://localhost:8080/actuator/health

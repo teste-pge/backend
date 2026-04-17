@@ -5,6 +5,7 @@ import com.rideflow.modules.queue.dto.RideCreatedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -18,8 +19,9 @@ public class RideCreatedConsumer {
             topics = "ride.created",
             groupId = "ride-notification-group"
     )
-    public void onRideCreated(RideCreatedEvent event) {
+    public void onRideCreated(RideCreatedEvent event, Acknowledgment ack) {
         log.info("Evento ride.created recebido do Kafka: rideId={}", event.rideId());
         notificationService.notifyAllDrivers(event);
+        ack.acknowledge();
     }
 }
