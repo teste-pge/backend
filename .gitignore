@@ -52,9 +52,6 @@ target/site/jacoco/
 # Não ignora docker-compose.yml (commitado) — ignora apenas sobrescritas locais
 docker-compose.override.yml
 
-# ── Variáveis de ambiente ───────────────────────────────────────────────────────
-.env
-# .env.example NÃO é ignorado (deve ser commitado como template)
 
 # ── OS ─────────────────────────────────────────────────────────────────────────
 .DS_Store
